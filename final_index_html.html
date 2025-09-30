@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wrecky Ball - Global Leaderboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      text-align: center;
+      color: #667eea;
+      margin-bottom: 10px;
+      font-size: 2.5em;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 0.9em;
+    }
+    
+    .input-section {
+      margin-bottom: 30px;
+    }
+    
+    input[type="text"] {
+      width: 100%;
+      padding: 15px;
+      font-size: 16px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      margin-bottom: 15px;
+      transition: border 0.3s;
+    }
+    
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .start-btn {
+      width: 100%;
+      padding: 15px;
+      font-size: 18px;
+      font-weight: bold;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .start-btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    .start-btn:active {
+      transform: translateY(0);
+    }
+    
+    .start-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .last-score {
+      background: #f0f4ff;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .last-score-label {
+      color: #666;
+      font-size: 0.9em;
+    }
+    
+    .last-score-value {
+      color: #667eea;
+      font-size: 2em;
+      font-weight: bold;
+    }
+    
+    .leaderboard {
+      margin-top: 30px;
+    }
+    
+    .leaderboard h2 {
+      color: #333;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .leaderboard-list {
+      list-style: none;
+    }
+    
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 15px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    
+    .leaderboard-item:hover {
+      background: #e9ecef;
+    }
+    
+    .leaderboard-item.top-3 {
+      background: linear-gradient(135deg, #ffd89b 0%, #19547b 100%);
+      color: white;
+      font-weight: bold;
+    }
+    
+    .leaderboard-item.top-1 {
+      background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    }
+    
+    .rank {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+    
+    .player-name {
+      flex: 1;
+    }
+    
+    .score {
+      font-weight: bold;
+      color: #667eea;
+    }
+    
+    .leaderboard-item.top-3 .score {
+      color: white;
+    }
+    
+    .loading {
+      text-align: center;
+      color: #666;
+      padding: 20px;
+    }
+    
+    .error {
+      background: #fee;
+      color: #c00;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2em;
+      }
+      
+      .container {
+        padding: 25px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎮 Wrecky Ball</h1>
+    <p class="subtitle">Defend the orb from enemies!</p>
+    
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    
+    <div id="lastScoreSection" class="last-score" style="display: none;">
+      <div class="last-score-label">Your Last Score</div>
+      <div class="last-score-value" id="lastScoreValue">0</div>
+    </div>
+    
+    <div class="input-section">
+      <input 
+        type="text" 
+        id="playerNameInput" 
+        placeholder="Enter your name..." 
+        maxlength="20"
+      />
+      <button class="start-btn" id="startBtn" onclick="startGame()">
+        Start Game
+      </button>
+    </div>
+    
+    <div class="leaderboard">
+      <h2>🏆 Global Leaderboard</h2>
+      <div id="leaderboardContent" class="loading">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ REPLACE THESE WITH YOUR ACTUAL SUPABASE CREDENTIALS ⚠️
+    const SUPABASE_URL = 'https://eknutnlxmougnbxbcdin.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVrbnV0bmx4bW91Z25ieGJjZGluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNDQyNDMsImV4cCI6MjA3NDgyMDI0M30.exBZq4ndTk8sMioFV-3Ut_VsyGku-orbPEfELYN-SGA';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    let lastScore = null;
+    
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedName = localStorage.getItem('playerName');
+      if (savedName) {
+        document.getElementById('playerNameInput').value = savedName;
+      }
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      lastScore = urlParams.get('score');
+      
+      if (lastScore) {
+        document.getElementById('lastScoreSection').style.display = 'block';
+        document.getElementById('lastScoreValue').textContent = lastScore;
+      }
+      
+      loadLeaderboard();
+    });
+    
+    async function loadLeaderboard() {
+      try {
+        const { data, error } = await supabase
+          .from('leaderboard')
+          .select('player_name, score, created_at')
+          .order('score', { ascending: false })
+          .limit(10);
+        
+        if (error) throw error;
+        
+        const content = document.getElementById('leaderboardContent');
+        
+        if (data.length === 0) {
+          content.innerHTML = '<p style="text-align: center; color: #666;">No scores yet. Be the first!</p>';
+          return;
+        }
+        
+        const list = document.createElement('ul');
+        list.className = 'leaderboard-list';
+        
+        data.forEach((entry, index) => {
+          const item = document.createElement('li');
+          item.className = 'leaderboard-item';
+          
+          if (index === 0) item.classList.add('top-1', 'top-3');
+          else if (index < 3) item.classList.add('top-3');
+          
+          const rank = ['🥇', '🥈', '🥉'][index] || `${index + 1}.`;
+          
+          item.innerHTML = `
+            <span class="rank">${rank}</span>
+            <span class="player-name">${escapeHtml(entry.player_name)}</span>
+            <span class="score">${entry.score}</span>
+          `;
+          
+          list.appendChild(item);
+        });
+        
+        content.innerHTML = '';
+        content.appendChild(list);
+      } catch (error) {
+        console.error('Error loading leaderboard:', error);
+        document.getElementById('leaderboardContent').innerHTML = 
+          '<p style="text-align: center; color: #c00;">Failed to load leaderboard</p>';
+      }
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function startGame() {
+      const nameInput = document.getElementById('playerNameInput');
+      const playerName = nameInput.value.trim();
+      
+      if (!playerName) {
+        showError('Please enter your name');
+        nameInput.focus();
+        return;
+      }
+      
+      if (playerName.length < 2) {
+        showError('Name must be at least 2 characters');
+        nameInput.focus();
+        return;
+      }
+      
+      localStorage.setItem('playerName', playerName);
+      window.location.href = `game.html?player=${encodeURIComponent(playerName)}`;
+    }
+    
+    function showError(message) {
+      const errorDiv = document.getElementById('errorMessage');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 3000);
+    }
+    
+    document.getElementById('playerNameInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        startGame();
+      }
+    });
+  </script>
+</body>
+</html>
