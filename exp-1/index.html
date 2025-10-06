@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Protect the Orb</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="leaderboard-sidebar">
+    <h2>🏆 Leaderboard</h2>
+    <div id="leaderboardContent" class="loading">Loading...</div>
+  </div>
+  <div class="main-content">
+    <h1 class="game-title">Protect the Orb</h1>
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    <div id="lastScoreSection" class="last-score" style="display: none;">
+      <div class="last-score-label">Your Last Score</div>
+      <div class="last-score-value" id="lastScoreValue">0</div>
+    </div>
+    <div class="input-section">
+      <input type="text" id="playerNameInput" placeholder="Enter Name" maxlength="20" />
+      <button class="start-btn" id="startBtn" onclick="startGame()">Enter Game</button>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Chopper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8C8 100%);
+        }
+        
+        canvas {
+            display: block;
+            cursor: none;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            font-size: 18px;
+            z-index: 10;
+        }
+        
+        #shop {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(139, 90, 43, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            border: 4px solid #8B4513;
+            display: none;
+            color: white;
+            min-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        
+        #shop h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #FFD700;
+        }
+        
+        .blade-option {
+            background: rgba(101, 67, 33, 0.8);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: 2px solid #654321;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .blade-option:hover {
+            background: rgba(101, 67, 33, 1);
+            transform: scale(1.05);
+        }
+        
+        .blade-option.owned {
+            background: rgba(34, 139, 34, 0.6);
+            border-color: #228B22;
+        }
+        
+        .blade-option.equipped {
+            background: rgba(218, 165, 32, 0.8);
+            border-color: #DAA520;
+        }
+        
+        button {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: #A0522D;
+        }
+        
+        #close-shop {
+            width: 100%;
+            background: #CD853F;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="ui">
+        <div>💰 Money: $<span id="money">0</span></div>
+        <div>🪵 Wood: <span id="wood">0</span></div>
+        <div style="font-size: 14px; margin-top: 10px;">Hold mouse to spin blade</div>
+    </div>
+    
+    <div id="shop">
+        <h2>🪓 Blade Shop 🪓</h2>
+        <div id="blade-list"></div>
+        <button id="close-shop">Close Shop</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Audio
+        const spinSound = new Audio('spin.mp3');
+        spinSound.loop = true;
+        spinSound.volume = 0.5;
+        
+        // Audio context for better browser compatibility
+        let audioInitialized = false;
+        
+        function initAudio() {
+            if (!audioInitialized) {
+                spinSound.load();
+                audioInitialized = true;
+                console.log('Audio initialized');
+            }
+        }
+        
+        // Game state
+        const game = {
+            money: 0,
+            wood: 0,
+            mouseX: 0,
+            mouseY: 0,
+            mouseDown: false,
+            bladeRotation: 0,
+            bladeSpeed: 0,
+            currentBlade: 0,
+            isSpinning: false
+        };
+        
+        // Blade types
+        const blades = [
+            { name: 'Rusty Blade', damage: 1, speed: 10, color: '#8B7355', price: 0, owned: true },
+            { name: 'Iron Blade', damage: 2, speed: 12, color: '#C0C0C0', price: 50, owned: false },
+            { name: 'Steel Blade', damage: 4, speed: 15, color: '#B0C4DE', price: 150, owned: false },
+            { name: 'Golden Blade', damage: 7, speed: 18, color: '#FFD700', price: 400, owned: false },
+            { name: 'Diamond Blade', damage: 12, speed: 22, color: '#00CED1', price: 1000, owned: false },
+            { name: 'Obsidian Blade', damage: 20, speed: 25, color: '#2F0F3D', price: 2500, owned: false }
+        ];
+        
+        // Trees
+        const trees = [];
+        const fallingTrees = [];
+        
+        // Shopkeeper
+        const shopkeeper = {
+            x: canvas.width - 150,
+            y: canvas.height - 150,
+            width: 80,
+            height: 100,
+            interactRadius: 100
+        };
+        
+        // Particles
+        const particles = [];
+        
+        class Tree {
+            constructor(x, thickness) {
+                this.x = x;
+                this.thickness = thickness;
+                this.height = 200 + thickness * 3;
+                this.health = thickness * 10;
+                this.maxHealth = this.health;
+                this.y = canvas.height - this.height;
+                this.chopProgress = 0;
+            }
+            
+            draw() {
+                // Tree trunk
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x - this.thickness / 2, this.y, this.thickness, this.height);
+                
+                // Tree top
+                const topSize = this.thickness * 2;
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y - 20, topSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(this.x - topSize * 0.6, this.y - 10, topSize * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(this.x + topSize * 0.6, this.y - 10, topSize * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Health bar
+                if (this.health < this.maxHealth) {
+                    const barWidth = this.thickness * 2;
+                    const barHeight = 8;
+                    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    ctx.fillRect(this.x - barWidth / 2, this.y - 40, barWidth, barHeight);
+                    
+                    ctx.fillStyle = '#00FF00';
+                    const healthPercent = this.health / this.maxHealth;
+                    ctx.fillRect(this.x - barWidth / 2, this.y - 40, barWidth * healthPercent, barHeight);
+                }
+            }
+            
+            takeDamage(amount) {
+                this.health -= amount;
+                
+                // Create wood particles
+                for (let i = 0; i < 3; i++) {
+                    particles.push({
+                        x: this.x + (Math.random() - 0.5) * this.thickness,
+                        y: canvas.height - this.height / 2,
+                        vx: (Math.random() - 0.5) * 3,
+                        vy: -Math.random() * 3 - 2,
+                        life: 30,
+                        size: Math.random() * 4 + 2
+                    });
+                }
+                
+                if (this.health <= 0) {
+                    return true;
+                }
+                return false;
+            }
+        }
+        
+        class FallingTree {
+            constructor(tree) {
+                this.x = tree.x;
+                this.y = tree.y;
+                this.thickness = tree.thickness;
+                this.height = tree.height;
+                this.angle = 0;
+                this.angularVelocity = 0.02;
+                this.woodValue = Math.floor(tree.thickness / 5) + 1;
+            }
+            
+            update() {
+                this.angle += this.angularVelocity;
+                this.angularVelocity += 0.001;
+                return this.angle > Math.PI / 2;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, canvas.height);
+                ctx.rotate(-this.angle);
+                
+                // Trunk
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(-this.thickness / 2, -this.height, this.thickness, this.height);
+                
+                // Top
+                const topSize = this.thickness * 2;
+                ctx.fillStyle = '#228B22';
+                ctx.beginPath();
+                ctx.arc(0, -this.height - 20, topSize, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+        
+        // Initialize trees
+        function spawnTree() {
+            const x = Math.random() * (canvas.width - 300) + 150;
+            const thickness = Math.random() * 40 + 20;
+            trees.push(new Tree(x, thickness));
+        }
+        
+        // Initialize with some trees
+        for (let i = 0; i < 8; i++) {
+            spawnTree();
+        }
+        
+        // Draw blade
+        function drawBlade() {
+            if (game.bladeSpeed > 0.1) {
+                ctx.save();
+                ctx.translate(game.mouseX, game.mouseY);
+                ctx.rotate(game.bladeRotation);
+                
+                const blade = blades[game.currentBlade];
+                const size = 30 + game.currentBlade * 5;
+                
+                // Blade glow
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 1.5);
+                gradient.addColorStop(0, blade.color + '40');
+                gradient.addColorStop(1, 'transparent');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(-size * 1.5, -size * 1.5, size * 3, size * 3);
+                
+                // Blade
+                ctx.strokeStyle = blade.color;
+                ctx.lineWidth = 6;
+                ctx.lineCap = 'round';
+                
+                for (let i = 0; i < 4; i++) {
+                    ctx.rotate(Math.PI / 2);
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(size, 0);
+                    ctx.stroke();
+                }
+                
+                // Center
+                ctx.fillStyle = blade.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            } else {
+                // Draw static cursor
+                ctx.fillStyle = blades[game.currentBlade].color;
+                ctx.beginPath();
+                ctx.arc(game.mouseX, game.mouseY, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Draw shopkeeper
+        function drawShopkeeper() {
+            const sk = shopkeeper;
+            
+            // Body
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(sk.x, sk.y + 40, sk.width, 60);
+            
+            // Head
+            ctx.fillStyle = '#FFDAB9';
+            ctx.beginPath();
+            ctx.arc(sk.x + sk.width / 2, sk.y + 30, 25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Hat
+            ctx.fillStyle = '#654321';
+            ctx.fillRect(sk.x + 10, sk.y + 10, 60, 15);
+            ctx.fillRect(sk.x + 20, sk.y - 10, 40, 20);
+            
+            // Check if player is near
+            const dist = Math.hypot(game.mouseX - (sk.x + sk.width / 2), game.mouseY - (sk.y + sk.height / 2));
+            if (dist < sk.interactRadius) {
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Press E to Shop', sk.x + sk.width / 2, sk.y - 20);
+            }
+        }
+        
+        // Update particles
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.2;
+                p.life--;
+                
+                ctx.fillStyle = '#CD853F';
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Game loop
+        function gameLoop() {
+            ctx.fillStyle = 'rgba(135, 206, 235, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ground
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            
+            // Update blade rotation
+            if (game.mouseDown) {
+                const blade = blades[game.currentBlade];
+                game.bladeSpeed = Math.min(game.bladeSpeed + 0.5, blade.speed);
+            } else {
+                game.bladeSpeed *= 0.95;
+            }
+            game.bladeRotation += game.bladeSpeed * 0.1;
+            
+            // Handle spin sound
+            if (game.bladeSpeed > 5 && !game.isSpinning) {
+                spinSound.play().then(() => {
+                    console.log('Audio playing');
+                }).catch(e => {
+                    console.error('Audio play failed:', e);
+                });
+                game.isSpinning = true;
+            } else if (game.bladeSpeed <= 5 && game.isSpinning) {
+                spinSound.pause();
+                spinSound.currentTime = 0;
+                game.isSpinning = false;
+                console.log('Audio stopped');
+            }
+            
+            // Update sound volume based on blade speed
+            if (game.isSpinning) {
+                spinSound.volume = Math.min(game.bladeSpeed / 20, 0.7);
+            }
+            
+            // Check blade collision with trees
+            if (game.bladeSpeed > 5) {
+                for (let i = trees.length - 1; i >= 0; i--) {
+                    const tree = trees[i];
+                    const dist = Math.hypot(game.mouseX - tree.x, game.mouseY - (canvas.height - tree.height / 2));
+                    
+                    if (dist < tree.thickness + 20) {
+                        const blade = blades[game.currentBlade];
+                        if (tree.takeDamage(blade.damage * 0.1)) {
+                            fallingTrees.push(new FallingTree(tree));
+                            trees.splice(i, 1);
+                            spawnTree();
+                        }
+                    }
+                }
+            }
+            
+            // Update falling trees
+            for (let i = fallingTrees.length - 1; i >= 0; i--) {
+                const ft = fallingTrees[i];
+                if (ft.update()) {
+                    game.wood += ft.woodValue;
+                    updateUI();
+                    fallingTrees.splice(i, 1);
+                } else {
+                    ft.draw();
+                }
+            }
+            
+            // Draw trees
+            trees.forEach(tree => tree.draw());
+            
+            // Draw particles
+            updateParticles();
+            
+            // Draw shopkeeper
+            drawShopkeeper();
+            
+            // Draw blade
+            drawBlade();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // UI updates
+        function updateUI() {
+            document.getElementById('money').textContent = game.money;
+            document.getElementById('wood').textContent = game.wood;
+        }
+        
+        // Shop system
+        function openShop() {
+            const shopEl = document.getElementById('shop');
+            const bladeList = document.getElementById('blade-list');
+            bladeList.innerHTML = '';
+            
+            blades.forEach((blade, index) => {
+                const div = document.createElement('div');
+                div.className = 'blade-option';
+                if (blade.owned) div.classList.add('owned');
+                if (index === game.currentBlade) div.classList.add('equipped');
+                
+                let statusText = '';
+                if (index === game.currentBlade) {
+                    statusText = ' [EQUIPPED]';
+                } else if (blade.owned) {
+                    statusText = ' [OWNED]';
+                }
+                
+                div.innerHTML = `
+                    <strong>${blade.name}${statusText}</strong><br>
+                    Damage: ${blade.damage} | Speed: ${blade.speed}<br>
+                    ${blade.price > 0 ? `Price: $${blade.price}` : 'Free'}
+                `;
+                
+                div.onclick = () => {
+                    if (blade.owned) {
+                        game.currentBlade = index;
+                        openShop();
+                    } else if (game.money >= blade.price) {
+                        game.money -= blade.price;
+                        blade.owned = true;
+                        game.currentBlade = index;
+                        updateUI();
+                        openShop();
+                    } else {
+                        alert('Not enough money!');
+                    }
+                };
+                
+                bladeList.appendChild(div);
+            });
+            
+            shopEl.style.display = 'block';
+        }
+        
+        // Event listeners
+        canvas.addEventListener('mousemove', (e) => {
+            game.mouseX = e.clientX;
+            game.mouseY = e.clientY;
+        });
+        
+        canvas.addEventListener('mousedown', () => {
+            game.mouseDown = true;
+            initAudio(); // Initialize audio on first interaction
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            game.mouseDown = false;
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'e' || e.key === 'E') {
+                const sk = shopkeeper;
+                const dist = Math.hypot(game.mouseX - (sk.x + sk.width / 2), game.mouseY - (sk.y + sk.height / 2));
+                if (dist < sk.interactRadius) {
+                    // Sell wood
+                    if (game.wood > 0) {
+                        game.money += game.wood * 5;
+                        game.wood = 0;
+                        updateUI();  
+                    }
+                    openShop();
+                } 
+            }
+        });
+        
+        document.getElementById('close-shop').addEventListener('click', () => {
+            document.getElementById('shop').style.display = 'none';
+        });
+        
+        // Start game
+        updateUI();
+        gameLoop();
+    </script>
+</body>
+</html>

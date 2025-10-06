@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tree Chopper Expanded</title>
+  <style>
+    body {
+      margin: 0;
+      background: #cce6cc;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #87ceeb;
+    }
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Camera + player position
+let camera = { x: 0, y: 0 };
+let player = {
+  x: 400,
+  y: 300,
+  speed: 4,
+  wood: 0,
+  money: 0,
+  bladeLevel: 1,
+  dps: 1
+};
+
+let mouse = { x: 0, y: 0, down: false };
+let bladeAngle = 0;
+
+// Blade colors by upgrade
+const bladeColors = ["gray", "blue", "green", "purple", "gold", "red"];
+
+// Shopkeeper
+let shop = { x: 200, y: 200, width: 40, height: 60 };
+
+// Create many trees
+let trees = [];
+for (let i = 0; i < 50; i++) {
+  let x = Math.random() * 2000 - 1000; // scatter across map
+  let y = Math.random() * 2000 - 1000;
+  let hp = 50 + Math.floor(Math.random() * 300);
+  trees.push({
+    x: x,
+    y: y,
+    width: 40,
+    height: 100 + Math.random() * 100,
+    hp: hp,
+    maxHp: hp,
+    falling: false,
+    fallAngle: 0
+  });
+}
+
+// Input keys
+let keys = {};
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+// Mouse
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  mouse.x = e.clientX - rect.left;
+  mouse.y = e.clientY - rect.top;
+});
+canvas.addEventListener("mousedown", () => { mouse.down = true; });
+canvas.addEventListener("mouseup", () => { mouse.down = false; });
+
+// Movement
+function movePlayer() {
+  if (keys["w"]) player.y -= player.speed;
+  if (keys["s"]) player.y += player.speed;
+  if (keys["a"]) player.x -= player.speed;
+  if (keys["d"]) player.x += player.speed;
+
+  // Camera follows player
+  camera.x = player.x - canvas.width / 2;
+  camera.y = player.y - canvas.height / 2;
+}
+
+// Chop trees
+function chopTrees() {
+  trees.forEach(tree => {
+    if (!tree.falling && tree.hp > 0 && mouse.down) {
+      // Blade world position
+      let worldMouseX = mouse.x + camera.x;
+      let worldMouseY = mouse.y + camera.y;
+      let dx = worldMouseX - tree.x;
+      let dy = worldMouseY - (tree.y - tree.height / 2);
+      let dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 80) {
+        tree.hp -= player.dps;
+        if (tree.hp <= 0) {
+          tree.hp = 0;
+          tree.falling = true;
+          player.wood += Math.floor(tree.maxHp / 10);
+        }
+      }
+    }
+  });
+}
+
+// Draw trees
+function drawTrees() {
+  trees.forEach(tree => {
+    ctx.save();
+    ctx.translate(tree.x - camera.x, tree.y - camera.y);
+    if (tree.falling) {
+      tree.fallAngle += 0.05;
+      ctx.rotate(tree.fallAngle);
+      if (tree.fallAngle > Math.PI / 2) {
+        // Respawn tree elsewhere
+        tree.x = Math.random() * 2000 - 1000;
+        tree.y = Math.random() * 2000 - 1000;
+        tree.maxHp = 50 + Math.floor(Math.random() * 300);
+        tree.hp = tree.maxHp;
+        tree.height = 100 + Math.random() * 100;
+        tree.falling = false;
+        tree.fallAngle = 0;
+      }
+    }
+    ctx.fillStyle = "brown";
+    ctx.fillRect(-tree.width/2, -tree.height, tree.width, tree.height);
+
+    // HP bar
+    if (!tree.falling) {
+      ctx.fillStyle = "red";
+      ctx.fillRect(-30, -tree.height - 20, 60, 8);
+      ctx.fillStyle = "green";
+      ctx.fillRect(-30, -tree.height - 20, 60 * (tree.hp / tree.maxHp), 8);
+    }
+    ctx.restore();
+  });
+}
+
+// Draw blade
+function drawBlade() {
+  bladeAngle += mouse.down ? 0.3 : 0.05;
+  ctx.save();
+  ctx.translate(mouse.x, mouse.y);
+  ctx.rotate(bladeAngle);
+  let color = bladeColors[Math.min(player.bladeLevel-1, bladeColors.length-1)];
+  ctx.fillStyle = color;
+  ctx.fillRect(-20, -5, 40, 10);
+  ctx.restore();
+}
+
+// Shopkeeper
+function drawShop() {
+  ctx.fillStyle = "black";
+  ctx.fillRect(shop.x - camera.x, shop.y - camera.y - shop.height, shop.width, shop.height);
+  ctx.fillStyle = "white";
+  ctx.fillText("Shop", shop.x - camera.x - 5, shop.y - camera.y + 20);
+
+  // Interaction
+  let worldMouseX = mouse.x + camera.x;
+  let worldMouseY = mouse.y + camera.y;
+  let dx = worldMouseX - (shop.x + shop.width/2);
+  let dy = worldMouseY - (shop.y - shop.height/2);
+  let dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist < 60 && mouse.down) {
+    if (player.wood > 0) {
+      player.money += player.wood;
+      player.wood = 0;
+    }
+    if (player.money >= 20) {
+      player.money -= 20;
+      player.bladeLevel++;
+      player.dps++;
+    }
+  }
+}
+
+// UI
+function drawUI() {
+  ctx.fillStyle = "black";
+  ctx.font = "16px Arial";
+  ctx.fillText("Wood: " + player.wood, 20, 20);
+  ctx.fillText("Money: $" + player.money, 20, 40);
+  ctx.fillText("Blade Lvl: " + player.bladeLevel, 20, 60);
+  ctx.fillText("DPS: " + player.dps, 20, 80);
+}
+
+// Game loop
+function gameLoop() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  movePlayer();
+  chopTrees();
+  drawTrees();
+  drawShop();
+  drawBlade();
+  drawUI();
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
