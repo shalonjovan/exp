@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time Attack Mode</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="../../game.css">
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="score">Time: 0.0s</div>
+    <div id="hp">Orb HP: 100</div>
+    <div id="specials">Slow-Mo: 3</div>
+    <div id="playerName"></div>
+  </div>
+  <div id="gameOverScreen">
+    <div class="title">Game Over!</div>
+    <div id="finalScore"></div>
+    <div id="submittingMessage"></div>
+    <div class="buttons">
+      <button onclick="restartGame()">Play Again</button>
+      <button class="secondary" onclick="backToMenu()">Main Menu</button>
+    </div>
+  </div>
+  <div id="mobileControls">
+    <button id="specialButton">Slow-Mo</button>
+  </div>
+  <script src="../../config.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

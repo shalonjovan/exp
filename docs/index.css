@@ -1,0 +1,49 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-height: 100vh; display: flex; background-image: url('bg.png'); background-size: cover; background-position: center; background-attachment: fixed; }
+.leaderboard-sidebar { width: 300px; background: rgba(255, 255, 255, 0.95); padding: 30px 20px; box-shadow: 4px 0 20px rgba(0,0,0,0.3); overflow-y: auto; }
+.leaderboard-sidebar h2 { color: #333; margin-bottom: 20px; text-align: center; font-size: 1.5em; }
+.mode-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+.tab-btn { flex: 1; padding: 10px; background: #f0f0f0; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s; }
+.tab-btn.active { background: #333; color: white; }
+.tab-btn:hover:not(.active) { background: #e0e0e0; }
+.main-content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; }
+.game-title { font-size: 5em; font-weight: 900; color: #fff; text-shadow: 4px 4px 8px rgba(0,0,0,0.8), -2px -2px 4px rgba(255,255,255,0.2); margin-bottom: 60px; letter-spacing: 2px; text-align: center; font-family: 'Impact', 'Arial Black', sans-serif; }
+.input-section { width: 100%; max-width: 500px; }
+input[type="text"] { width: 100%; padding: 18px 20px; font-size: 16px; border: none; background: rgba(255, 255, 255, 0.85); border-radius: 8px; margin-bottom: 30px; text-align: center; color: #999; }
+input[type="text"]:focus { outline: none; background: rgba(255, 255, 255, 0.95); color: #333; }
+input[type="text"]::placeholder { color: #999; }
+.mode-selection h3 { color: #fff; text-align: center; font-size: 1.5em; margin-bottom: 20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.6); }
+.mode-buttons { display: flex; gap: 20px; }
+.mode-btn { flex: 1; padding: 30px 20px; background: rgba(80, 80, 80, 0.9); color: #fff; border: none; border-radius: 12px; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.mode-btn:hover { background: rgba(60, 60, 60, 0.95); transform: translateY(-4px); box-shadow: 0 6px 20px rgba(0,0,0,0.5); }
+.mode-btn:active { transform: translateY(-2px); }
+.mode-title { font-size: 1.3em; font-weight: 700; letter-spacing: 1px; }
+.mode-desc { font-size: 0.9em; color: #ccc; }
+.last-score { background: rgba(255, 255, 255, 0.9); padding: 20px; border-radius: 10px; margin-bottom: 30px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+.last-score-label { color: #666; font-size: 0.9em; }
+.last-score-value { color: #333; font-size: 2.5em; font-weight: bold; }
+.leaderboard-list { list-style: none; }
+.leaderboard-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; margin-bottom: 8px; background: #f8f9fa; border-radius: 8px; transition: background 0.2s; }
+.leaderboard-item:hover { background: #e9ecef; }
+.leaderboard-item.top-1 { background: #FFD700; color: #000; font-weight: bold; }
+.leaderboard-item.top-2 { background: #C0C0C0; color: #000; font-weight: bold; }
+.leaderboard-item.top-3 { background: #CD7F32; color: #fff; font-weight: bold; }
+.rank { font-weight: bold; margin-right: 10px; min-width: 30px; }
+.player-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.score { font-weight: bold; color: #333; margin-left: 10px; }
+.leaderboard-item.top-1 .score, .leaderboard-item.top-2 .score { color: #000; }
+.leaderboard-item.top-3 .score { color: #fff; }
+.loading { text-align: center; color: #666; padding: 20px; font-size: 14px; }
+.error { background: rgba(255, 200, 200, 0.95); color: #c00; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+@media (max-width: 1024px) {
+  body { flex-direction: column; }
+  .leaderboard-sidebar { width: 100%; max-height: 300px; }
+  .game-title { font-size: 3.5em; margin-bottom: 40px; }
+  .mode-buttons { flex-direction: column; }
+}
+@media (max-width: 768px) {
+  .game-title { font-size: 2.5em; margin-bottom: 30px; }
+  .leaderboard-sidebar { padding: 20px 15px; }
+  .main-content { padding: 30px 20px; }
+  .mode-selection h3 { font-size: 1.2em; }
+}

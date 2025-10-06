@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Protect the Orb</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="leaderboard-sidebar">
+    <h2>🏆 Leaderboard</h2>
+    <div class="mode-tabs">
+      <button class="tab-btn active" onclick="switchLeaderboard('classic')">Classic</button>
+      <button class="tab-btn" onclick="switchLeaderboard('time')">Time</button>
+    </div>
+    <div id="leaderboardContent" class="loading">Loading...</div>
+  </div>
+  <div class="main-content">
+    <h1 class="game-title">Protect the Orb</h1>
+    <div id="errorMessage" class="error" style="display: none;"></div>
+    <div id="lastScoreSection" class="last-score" style="display: none;">
+      <div class="last-score-label">Your Last Score</div>
+      <div class="last-score-value" id="lastScoreValue">0</div>
+    </div>
+    <div class="input-section">
+      <input type="text" id="playerNameInput" placeholder="Enter Name" maxlength="20" />
+      <div class="mode-selection">
+        <h3>Select Mode</h3>
+        <div class="mode-buttons">
+          <button class="mode-btn" onclick="startGame('classic')">
+            <span class="mode-title">Classic</span>
+            <span class="mode-desc">Defend from all sides</span>
+          </button>
+          <button class="mode-btn" onclick="startGame('time')">
+            <span class="mode-title">Time Attack</span>
+            <span class="mode-desc">Survive the onslaught</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
