@@ -4,10 +4,14 @@ app = Ursina()
 
 cube = Entity(
     model='cube',
-    color=color.orange,
+    color=color.azure,
     scale=2
 )
 
-EditorCamera()  # allows mouse control
+EditorCamera()
+
+def update():
+    cube.rotation_x += 40 * time.dt
+    cube.rotation_y += 60 * time.dt
 
 app.run()
